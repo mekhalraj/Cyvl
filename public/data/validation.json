@@ -1,0 +1,24 @@
+{
+  "source": "City of Somerville 311 (dataset 4pyi-uqq6), flooding/drainage requests, resolved to 2020 US Census blocks (TIGERweb).",
+  "date_range": null,
+  "flood_types": [
+    "Catch basin complaint",
+    "Flooding Report",
+    "Sewer issue",
+    "Sewers and Drains",
+    "Standing water"
+  ],
+  "footprint_complaints": 360,
+  "by_category": {
+    "sewer": 181,
+    "catch_basin": 165,
+    "flooding": 14
+  },
+  "blocks_with_complaints": 73,
+  "ranked_cells": 169,
+  "cells_in_complaint_blocks": 153,
+  "top10_validated": 10,
+  "top10_block_complaints": 92,
+  "spearman_rho": 0.085,
+  "spearman_p": 0.2742
+}
