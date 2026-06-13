@@ -8,6 +8,7 @@ Outputs:
 """
 import json, os, urllib.request, urllib.parse, csv
 from shapely.geometry import shape, Point
+from shapely import STRtree
 from pyproj import Transformer
 from scipy.stats import spearmanr
 
@@ -15,8 +16,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 WEB = os.path.join(ROOT, "public", "data"); os.makedirs(WEB, exist_ok=True)
 OUT = os.path.join(HERE, "output")
 
-# footprint + ~120 m buffer
-W, S, E, N = -71.0889, 42.3865, -71.0768, 42.3997
+# entire City of Somerville
+W, S, E, N = -71.138, 42.370, -71.069, 42.421
 FLOOD = ("lower(type) like '%catch basin%' or lower(type) like '%flood%' or "
          "lower(type) like '%sewer%' or lower(type) like '%drain%' or lower(type) like '%standing water%'")
 
@@ -76,19 +77,19 @@ for ft in blocks:
 json.dump({"type": "FeatureCollection", "features": feats}, open(os.path.join(WEB, "complaints_blocks.geojson"), "w"))
 print(f"footprint blocks with complaints: {len(feats)}; total complaints: {total_fp}")
 
-# 4) validation vs ranked cells
-to4326 = Transformer.from_crs(32619, 4326, always_xy=True)
+# 4) validation vs citywide ranked cells (read ranking.geojson centroids; STRtree spatial join)
+rk = json.load(open(os.path.join(WEB, "ranking.geojson")))["features"]
 cells = []
-with open(os.path.join(OUT, "priority_ranking.csv")) as fh:
-    for row in csv.DictReader(fh):
-        lon, lat = to4326.transform(float(row["xc_utm"]), float(row["yc_utm"]))
-        cells.append({"priority": float(row["priority"]), "rank": int(row["rank"]), "pt": Point(lon, lat)})
-# assign each cell its block's complaint count
+for f in rk:
+    ring = f["geometry"]["coordinates"][0]
+    lon = sum(c[0] for c in ring) / len(ring); lat = sum(c[1] for c in ring) / len(ring)
+    cells.append({"priority": f["properties"]["priority"], "pt": Point(lon, lat)})
+polys = [bg[1] for bg in block_geoms]; counts = [bg[2] for bg in block_geoms]
+tree = STRtree(polys)
 for c in cells:
     c["bc"] = 0
-    for gid, poly, tot in block_geoms:
-        if poly.contains(c["pt"]):
-            c["bc"] = tot; break
+    for i in tree.query(c["pt"]):
+        if polys[i].contains(c["pt"]): c["bc"] = counts[i]; break
 prio = [c["priority"] for c in cells]; bc = [c["bc"] for c in cells]
 rho, p = spearmanr(prio, bc) if len(cells) > 2 else (None, None)
 cells.sort(key=lambda c: -c["priority"])

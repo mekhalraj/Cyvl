@@ -5,6 +5,10 @@
 *.laz
 *.las
 
+# large regenerable pipeline intermediates (web copies live in public/data)
+pipeline/data/city/
+pipeline/data/processed/*.geojson
+
 # python
 __pycache__/
 *.pyc

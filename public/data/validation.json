@@ -8,17 +8,17 @@
     "Sewers and Drains",
     "Standing water"
   ],
-  "footprint_complaints": 360,
+  "footprint_complaints": 3645,
   "by_category": {
-    "sewer": 181,
-    "catch_basin": 165,
-    "flooding": 14
+    "catch_basin": 1700,
+    "flooding": 145,
+    "sewer": 1800
   },
-  "blocks_with_complaints": 73,
-  "ranked_cells": 169,
-  "cells_in_complaint_blocks": 153,
-  "top10_validated": 10,
-  "top10_block_complaints": 92,
-  "spearman_rho": 0.085,
-  "spearman_p": 0.2742
+  "blocks_with_complaints": 587,
+  "ranked_cells": 4594,
+  "cells_in_complaint_blocks": 3892,
+  "top10_validated": 4,
+  "top10_block_complaints": 20,
+  "spearman_rho": -0.079,
+  "spearman_p": 0.0
 }
