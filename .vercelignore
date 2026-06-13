@@ -1,0 +1,6 @@
+# The deployed Next.js app only needs app/, components/, public/, and config.
+# pipeline/ is local build tooling and holds large regenerable data (e.g. a 241 MB
+# contour_vertices.npz) that blows past Vercel's 100 MB file limit -- never upload it.
+pipeline/
+.claude/
+.git/
