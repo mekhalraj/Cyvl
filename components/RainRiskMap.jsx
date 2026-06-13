@@ -59,17 +59,17 @@ const IcWaves = I(<>
   <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" /></>);
 
 const LAYERS = [
-  { key: "ranking",    label: "Ponding risk",        group: "Risk & validation", file: "ranking.geojson",            on: true,  icon: <IcGrid /> },
-  { key: "complaints", label: "311 complaints",       group: "Risk & validation", file: "complaints_blocks.geojson",  on: true,  icon: <IcAlert /> },
-  { key: "pavement",   label: "Pavement (PCI)",       group: "Risk & validation", file: "pavement.geojson",           on: false, icon: <IcRoad /> },
-  { key: "basins",     label: "Catch basins",         group: "Drainage assets",   file: "merged_catch_basins.geojson", on: true,  icon: <IcDrop /> },
-  { key: "storm_mains",label: "Storm mains",          group: "City stormwater net", file: "city_storm_mains.geojson", on: true,  icon: <IcPipe /> },
-  { key: "laterals",   label: "CB laterals",          group: "City stormwater net", file: "city_laterals.geojson",    on: false, icon: <IcBranch /> },
-  { key: "inlets",     label: "Storm inlets",         group: "City stormwater net", file: "city_inlets.geojson",      on: false, icon: <IcDot /> },
-  { key: "outfalls",   label: "Outfalls",             group: "City stormwater net", file: "city_outfalls.geojson",    on: true,  icon: <IcOut /> },
-  { key: "manholes",   label: "SW manholes",          group: "City stormwater net", file: "city_manholes.geojson",    on: false, icon: <IcDisc /> },
+  { key: "ranking",    label: "Flood risk",               group: "Risk & validation", file: "ranking.geojson",            on: true,  icon: <IcGrid /> },
+  { key: "complaints", label: "311 complaints · City",     group: "Risk & validation", file: "complaints_blocks.geojson",  on: true,  icon: <IcAlert /> },
+  { key: "pavement",   label: "Pavement PCI · Cyvl",       group: "Risk & validation", file: "pavement.geojson",           on: false, icon: <IcRoad /> },
+  { key: "basins",     label: "Catch basins · Cyvl + City", group: "Drainage assets",  file: "merged_catch_basins.geojson", on: true,  icon: <IcDrop /> },
+  { key: "storm_mains",label: "Storm mains · City",        group: "Stormwater network", file: "city_storm_mains.geojson", on: true,  icon: <IcPipe /> },
+  { key: "laterals",   label: "CB laterals · City",        group: "Stormwater network", file: "city_laterals.geojson",    on: false, icon: <IcBranch /> },
+  { key: "inlets",     label: "Storm inlets · City",       group: "Stormwater network", file: "city_inlets.geojson",      on: false, icon: <IcDot /> },
+  { key: "outfalls",   label: "Outfalls · City",           group: "Stormwater network", file: "city_outfalls.geojson",    on: true,  icon: <IcOut /> },
+  { key: "manholes",   label: "SW manholes · City",        group: "Stormwater network", file: "city_manholes.geojson",    on: false, icon: <IcDisc /> },
 ];
-const GROUPS = ["Risk & validation", "Drainage assets", "City stormwater net"];
+const GROUPS = ["Risk & validation", "Drainage assets", "Stormwater network"];
 
 function Capture({ onMap }) { const m = useMap(); useEffect(() => onMap(m), [m, onMap]); return null; }
 function CountUp({ value, dur = 1100, className }) {
@@ -185,7 +185,7 @@ export default function RainRiskMap() {
       <motion.header className="appbar glass" {...fade(0)}>
         <span className="brand-dot"><IcWaves style={{ color: "#06121f" }} /></span>
         <div><h1><span className="wordmark">FlowState</span><span className="badge">Somerville</span></h1>
-          <p className="sub">Elevation-aware stormwater ponding intelligence — Cyvl + City network on LiDAR terrain, validated against 311</p></div>
+          <p className="sub">Elevation-aware stormwater flood-risk intelligence — Cyvl + City network on LiDAR terrain, validated against 311</p></div>
         <span className="spacer" /><span className="pill"><span className="live" /> LIVE</span>
       </motion.header>
 
@@ -237,7 +237,7 @@ export default function RainRiskMap() {
       </motion.aside>
 
       <motion.div className="legend glass" {...fade(0.2)}>
-        <h3>Ponding-risk priority</h3>
+        <h3>Flood-risk priority</h3>
         <div className="lr"><span className="swatch" style={{ background: "#f87171" }} />≥ 75 highest</div>
         <div className="lr"><span className="swatch" style={{ background: "#fb923c" }} />60–75 high</div>
         <div className="lr"><span className="swatch" style={{ background: "#fbbf24" }} />40–60 moderate</div>

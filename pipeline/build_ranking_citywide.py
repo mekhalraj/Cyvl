@@ -62,6 +62,32 @@ else:
     pav = np.empty((0, 3))
 print(f"basins {len(bxy)}, pavement segs {nseg}, pavement vertices {len(pav)}")
 
+# City stormwater network (mains/laterals lines + inlet/manhole points) -> UTM point samples.
+# Evidence that a cell is a real, instrumented place even when it has no MERGED catch basin or
+# Cyvl pavement (e.g. Union Square / Prospect Hill have city inlets+mains but no merged basins),
+# so the keep-filter below doesn't drop those developed blocks as "un-instrumented voids".
+def load_net():
+    nlon, nlat = [], []
+    for name in ("city_storm_mains", "city_laterals", "city_inlets", "city_manholes"):
+        fp = os.path.join(WEB, f"{name}.geojson")
+        if not os.path.exists(fp): continue
+        try: feats = json.load(open(fp))["features"]
+        except Exception: continue
+        for f in feats:
+            g = f.get("geometry")
+            if not g: continue
+            t, co = g["type"], g["coordinates"]
+            pts = ([co] if t == "Point" else co if t == "LineString"
+                   else [c for part in co for c in part] if t in ("MultiLineString", "Polygon") else [])
+            for c in pts:
+                nlon.append(c[0]); nlat.append(c[1])
+    if not nlon: return np.empty((0, 2))
+    nx, ny = to_utm.transform(np.array(nlon), np.array(nlat))
+    return np.column_stack([nx, ny])
+
+net = load_net()
+print(f"stormwater-network vertices {len(net)}")
+
 # hydrography (OSM water) -> one UTM polygon, used to drop open-water cells (Mystic + ponds)
 def load_water():
     cache = os.path.join(PROC, "water_city.json")
@@ -127,16 +153,19 @@ for cy in range(ncy):
             m = (pav[:,0]>=x0-B)&(pav[:,0]<x1+B)&(pav[:,1]>=y0-B)&(pav[:,1]<y1+B)
             vals = pav[m,2]; vals = vals[~np.isnan(vals)]
             pci = float(vals.mean()) if len(vals) else None
+        nnet = int(((net[:,0]>=x0-B)&(net[:,0]<x1+B)&(net[:,1]>=y0-B)&(net[:,1]<y1+B)).sum()) if len(net) else 0
         wfrac = 0.0
         if water is not None:
             cell = box(x0, y0, x1, y1)
             wfrac = (water.intersection(cell).area / cell.area) if cell.area else 0.0
-        rows.append(dict(cx=cx, cy=cy, x0=x0, x1=x1, y0=y0, y1=y1, pond=pond, zmean=zmean, basins=nb, pci=pci, wfrac=wfrac))
+        rows.append(dict(cx=cx, cy=cy, x0=x0, x1=x1, y0=y0, y1=y1, pond=pond, zmean=zmean, basins=nb, pci=pci, net=nnet, wfrac=wfrac))
 
-# keep only cells with drainage/pavement evidence and drop open-water cells; normalize on survivors.
-# (un-instrumented + water-fringe cells otherwise score ~90 by default and form a false red rim.)
+# keep only cells with drainage/pavement/stormwater-network evidence and drop open-water cells;
+# normalize on survivors. (un-instrumented + water-fringe cells otherwise score ~90 by default and
+# form a false red rim. Storm-network evidence rescues developed blocks that have city inlets/mains
+# but no MERGED catch basin or Cyvl pavement coverage — e.g. Union Square / Prospect Hill.)
 n_before = len(rows)
-rows = [r for r in rows if r["wfrac"] < 0.5 and (r["basins"] > 0 or r["pci"] is not None)]
+rows = [r for r in rows if r["wfrac"] < 0.5 and (r["basins"] > 0 or r["pci"] is not None or r["net"] > 0)]
 print(f"cells: {n_before} candidate -> {len(rows)} ranked "
       f"({n_before - len(rows)} dropped: un-instrumented voids + open water)")
 # Normalize ponding on the 99th percentile (not 95th): only the extreme top saturates to 1.0, so the
