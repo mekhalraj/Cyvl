@@ -103,8 +103,8 @@ body {
   transition: transform .2s cubic-bezier(.4,1.3,.5,1); }
 .sw.on .knob { transform: translateX(15px); }
 
-/* ---- legend (bottom-left) ---- */
-.legend { position: absolute; left: 14px; bottom: 16px; z-index: 20; padding: 12px 14px; max-width: 220px; }
+/* ---- legend (bottom-right, above the zoom control; clears the left rail) ---- */
+.legend { position: absolute; right: 14px; bottom: 84px; z-index: 20; padding: 12px 14px; max-width: 220px; }
 .legend h3 { margin: 0 0 7px; font-size: 10px; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); }
 .legend .lr { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 11px; color: var(--muted); }
 .legend .swatch { width: 14px; height: 14px; border-radius: 4px; flex: 0 0 auto; }
@@ -112,11 +112,42 @@ body {
 .legend .line { width: 16px; height: 3px; border-radius: 2px; flex: 0 0 auto; }
 
 /* leaflet dark popups + controls */
-.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel-solid); color: var(--text); border: 1px solid var(--border-strong); }
-.leaflet-popup-content { margin: 11px 13px; font-size: 12px; line-height: 1.5; font-family: var(--font-sans); }
-.leaflet-popup-content b { color: #fff; } .leaflet-popup-content .mono { font-family: var(--font-mono); }
+.leaflet-popup-content-wrapper { background: var(--panel-solid); color: var(--text); border: 1px solid var(--border-strong);
+  border-radius: 16px; box-shadow: var(--shadow); }
+.leaflet-popup-tip { background: var(--panel-solid); border: 1px solid var(--border-strong); }
+.leaflet-popup-content { margin: 0; font-size: 12px; line-height: 1.5; font-family: var(--font-sans); }
+.leaflet-popup-content b { color: #fff; } .leaflet-popup-content .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .leaflet-popup-content img { margin-top: 7px; border-radius: 8px; max-width: 230px; display: block; }
 .leaflet-popup-content a { color: var(--accent); }
+.leaflet-popup-close-button { color: var(--muted) !important; padding: 8px 9px 0 0 !important; }
+.leaflet-popup-close-button:hover { color: var(--text) !important; }
+
+/* rich ranking-cell popup (mirrors the rail's cards/KPIs) */
+.popup-card { padding: 13px 14px; min-width: 220px; }
+.popup-head { display: flex; align-items: center; gap: 11px; }
+.popup-badge { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: 0 0 auto;
+  font-weight: 700; font-size: 14px; color: #08111c; }
+.popup-title { display: flex; flex-direction: column; gap: 2px; line-height: 1.2; }
+.popup-title b { font-size: 14px; }
+.popup-band { font-size: 9.5px; letter-spacing: .5px; text-transform: uppercase; font-weight: 600; }
+.popup-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 12px; }
+.popup-kpi { background: rgba(255,255,255,.025); border: 1px solid var(--border); border-radius: 10px; padding: 8px 6px; text-align: center; }
+.popup-kpi .n { font-size: 17px; font-weight: 600; line-height: 1; color: #fff; }
+.popup-kpi .n small { font-size: 9.5px; color: var(--muted); font-weight: 400; }
+.popup-kpi .l { font-size: 9px; color: var(--muted); margin-top: 4px; }
+.popup-scores { margin-top: 13px; }
+.popup-sub { font-size: 9.5px; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+.popup-score { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+.popup-score-l { flex: 0 0 78px; font-size: 10.5px; color: var(--muted); }
+.popup-bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; }
+.popup-bar-fill { display: block; height: 100%; border-radius: 3px; }
+.popup-score-v { flex: 0 0 30px; text-align: right; font-size: 11px; color: var(--text); }
+
+/* harmonized header for the other layer popups */
+.popup-mini { padding: 11px 13px; min-width: 150px; }
+.popup-h { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #fff; font-size: 12.5px; }
+.popup-hdot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 8px currentColor; }
+.popup-mbody { margin-top: 6px; font-size: 11px; color: var(--muted); line-height: 1.5; }
 .leaflet-bar a { background: var(--panel-solid) !important; color: var(--text) !important; border-color: var(--border) !important; }
 .leaflet-control-attribution { background: rgba(10,14,20,.7) !important; color: var(--muted-2) !important; }
 .leaflet-control-attribution a { color: var(--muted) !important; }

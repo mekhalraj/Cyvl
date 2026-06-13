@@ -9,6 +9,36 @@ const CENTER = [42.3905, -71.099];
 const prioColor = (p) => (p >= 75 ? "#f87171" : p >= 60 ? "#fb923c" : p >= 40 ? "#fbbf24" : "#34d399");
 const pciColor = (v) => (v == null ? "#7f8c99" : v >= 70 ? "#34d399" : v >= 55 ? "#fbbf24" : v >= 40 ? "#fb923c" : "#f87171");
 const compColor = (c) => (c >= 10 ? "#f59e0b" : c >= 5 ? "#fbbf24" : "#fcd34d");
+const prioBand = (p) => (p >= 75 ? "≥ 75 · highest" : p >= 60 ? "60–75 · high" : p >= 40 ? "40–60 · moderate" : "< 40 · lower");
+
+// app-styled leaflet popups (raw HTML strings — kept lightweight for ~1.7k cells)
+const scoreRow = (label, v, color) => {
+  const has = v != null && !Number.isNaN(v);
+  const pct = has ? Math.round(Math.max(0, Math.min(1, v)) * 100) : 0;
+  return `<div class="popup-score"><span class="popup-score-l">${label}</span>`
+    + `<span class="popup-bar"><span class="popup-bar-fill" style="width:${pct}%;background:${color}"></span></span>`
+    + `<span class="popup-score-v mono">${has ? v.toFixed(2) : "—"}</span></div>`;
+};
+const rankingPopupHTML = (p, total) => {
+  const c = prioColor(p.priority);
+  const pci = p.mean_pci != null ? Math.round(p.mean_pci) : "—";
+  return `<div class="popup-card">`
+    + `<div class="popup-head"><span class="popup-badge mono" style="background:${c}">${Math.round(p.priority)}</span>`
+    + `<span class="popup-title"><b>Priority <span class="mono">${p.priority}</span></b>`
+    + `<span class="popup-band" style="color:${c}">${prioBand(p.priority)} · rank ${p.rank}/${total}</span></span></div>`
+    + `<div class="popup-kpis">`
+    + `<div class="popup-kpi"><div class="n mono">${p.ponding_ft}<small> ft</small></div><div class="l">ponding</div></div>`
+    + `<div class="popup-kpi"><div class="n mono">${p.basins}</div><div class="l">catch basins</div></div>`
+    + `<div class="popup-kpi"><div class="n mono">${pci}</div><div class="l">mean PCI</div></div></div>`
+    + `<div class="popup-scores"><div class="popup-sub">Score breakdown</div>`
+    + scoreRow("Ponding depth", p.s_pond, c)
+    + scoreRow("Basin deficit", p.s_basin_deficit, c)
+    + scoreRow("Pavement", p.s_pci, c)
+    + `</div></div>`;
+};
+const miniPopup = (title, color, body = "") =>
+  `<div class="popup-mini"><div class="popup-h"><span class="popup-hdot" style="background:${color};color:${color}"></span>${title}</div>`
+  + (body ? `<div class="popup-mbody">${body}</div>` : "") + `</div>`;
 
 const I = (d) => (p) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -113,20 +143,20 @@ export default function RainRiskMap() {
         {show.complaints && data.complaints && (
           <GeoJSON data={data.complaints}
             style={(f) => ({ color: compColor(f.properties.complaints), weight: 0.6, fillColor: compColor(f.properties.complaints), fillOpacity: Math.min(0.12 + f.properties.complaints / 50, 0.5) })}
-            onEachFeature={(f, l) => { const p = f.properties; l.bindPopup(`<b>311 flooding: <span class="mono">${p.complaints}</span></b><br>catch basin ${p.catch_basin || 0} · sewer ${p.sewer || 0} · flooding ${p.flooding || 0}`); }} />)}
+            onEachFeature={(f, l) => { const p = f.properties; l.bindPopup(miniPopup("311 flooding complaints", compColor(p.complaints), `<span class="mono">${p.complaints}</span> total · catch basin <span class="mono">${p.catch_basin || 0}</span> · sewer <span class="mono">${p.sewer || 0}</span> · flooding <span class="mono">${p.flooding || 0}</span>`)); }} />)}
 
         {show.ranking && data.ranking && (
           <GeoJSON data={data.ranking}
             style={(f) => ({ color: prioColor(f.properties.priority), weight: 0.4, fillColor: prioColor(f.properties.priority), fillOpacity: 0.4 })}
-            onEachFeature={(f, l) => { const p = f.properties; l.bindPopup(`<b>Priority <span class="mono">${p.priority}</span></b> (rank ${p.rank})<br>ponding ${p.ponding_ft} ft · basins ${p.basins}${p.mean_pci != null ? ` · PCI ${Math.round(p.mean_pci)}` : ""}<br><small class="mono">pond ${p.s_pond} · deficit ${p.s_basin_deficit} · pav ${p.s_pci}</small>`); }} />)}
+            onEachFeature={(f, l) => { const p = f.properties; l.bindPopup(rankingPopupHTML(p, data.ranking.features.length), { maxWidth: 300, minWidth: 230 }); }} />)}
 
         {show.pavement && data.pavement && (
           <GeoJSON data={data.pavement} style={(f) => ({ color: pciColor(f.properties.condition_score), weight: 2.5 })}
-            onEachFeature={(f, l) => l.bindPopup(`<b>Pavement</b><br>PCI <span class="mono">${f.properties.condition_score ?? "n/a"}</span> (${f.properties.condition_label ?? "n/a"})`)} />)}
+            onEachFeature={(f, l) => l.bindPopup(miniPopup("Pavement (PCI)", pciColor(f.properties.condition_score), `PCI <span class="mono">${f.properties.condition_score ?? "n/a"}</span> · ${f.properties.condition_label ?? "n/a"}`))} />)}
 
         {show.storm_mains && data.storm_mains && (
           <GeoJSON data={data.storm_mains} style={{ color: "#60a5fa", weight: 1.6, opacity: 0.7 }}
-            onEachFeature={(f, l) => l.bindPopup(`<b>Storm gravity main</b> (City)`)} />)}
+            onEachFeature={(f, l) => l.bindPopup(miniPopup("Storm gravity main", "#60a5fa", "City stormwater network"))} />)}
         {show.laterals && data.laterals && (
           <GeoJSON data={data.laterals} style={{ color: "#93c5fd", weight: 1, opacity: 0.6, dashArray: "3 3" }} />)}
 
@@ -136,14 +166,16 @@ export default function RainRiskMap() {
           <GeoJSON data={data.manholes} pointToLayer={(f, ll) => cm(ll, { radius: 3, color: "#9fb3c8", weight: 0.5, fillColor: "#6c7d8f", fillOpacity: 0.75 })} />)}
         {show.outfalls && data.outfalls && (
           <GeoJSON data={data.outfalls} pointToLayer={(f, ll) => cm(ll, { radius: 6, color: "#fff", weight: 1.5, fillColor: "#f43f5e", fillOpacity: 0.9 })}
-            onEachFeature={(f, l) => l.bindPopup(`<b>Storm discharge / outfall</b> (City)`)} />)}
+            onEachFeature={(f, l) => l.bindPopup(miniPopup("Storm discharge / outfall", "#f43f5e", "City stormwater network"))} />)}
 
         {show.basins && data.basins && (
           <GeoJSON data={data.basins}
             pointToLayer={(f, ll) => f.properties.source === "cyvl"
               ? cm(ll, { radius: 5.5, color: "#fde047", weight: 2, fillColor: "#38bdf8", fillOpacity: 0.95 })
               : cm(ll, { radius: 3.5, color: "#38bdf8", weight: 0.6, fillColor: "#1d4ed8", fillOpacity: 0.65 })}
-            onEachFeature={(f, l) => l.bindPopup(f.properties.source === "cyvl" ? `<b>Catch basin</b> · <span class="mono">Cyvl</span> (verified)` : `<b>Catch basin</b> · City GIS`)} />)}
+            onEachFeature={(f, l) => l.bindPopup(f.properties.source === "cyvl"
+              ? miniPopup("Catch basin", "#38bdf8", `<span class="mono">Cyvl</span> · verified`)
+              : miniPopup("Catch basin", "#1d4ed8", "City GIS"))} />)}
       </MapContainer>
 
       <motion.header className="appbar glass" {...fade(0)}>
