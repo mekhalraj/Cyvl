@@ -10,6 +10,8 @@ const prioColor = (p) => (p >= 75 ? "#f87171" : p >= 60 ? "#fb923c" : p >= 40 ? 
 const pciColor = (v) => (v == null ? "#7f8c99" : v >= 70 ? "#34d399" : v >= 55 ? "#fbbf24" : v >= 40 ? "#fb923c" : "#f87171");
 const compColor = (c) => (c >= 10 ? "#f59e0b" : c >= 5 ? "#fbbf24" : "#fcd34d");
 const prioBand = (p) => (p >= 75 ? "≥ 75 · highest" : p >= 60 ? "60–75 · high" : p >= 40 ? "40–60 · moderate" : "< 40 · lower");
+// LiDAR terrain contours: cool (low) -> warm (high) hypsometric tint
+const elevColor = (e) => (e >= 100 ? "#fca5a5" : e >= 70 ? "#fcd9a5" : e >= 45 ? "#bde3a8" : e >= 25 ? "#8fd3c7" : "#7fb3d5");
 
 // app-styled leaflet popups (raw HTML strings — kept lightweight for ~1.7k cells)
 const scoreRow = (label, v, color) => {
@@ -57,6 +59,7 @@ const IcWaves = I(<>
   <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
   <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
   <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" /></>);
+const IcContour = I(<><path d="M3 15a9 6 0 0 1 18 0" /><path d="M6 15a6 4 0 0 1 12 0" /><path d="M9 15a3 2 0 0 1 6 0" /></>);
 
 const LAYERS = [
   { key: "ranking",    label: "Flood risk",               group: "Risk & validation", file: "ranking.geojson",            on: true,  icon: <IcGrid /> },
@@ -68,8 +71,9 @@ const LAYERS = [
   { key: "inlets",     label: "Storm inlets · City",       group: "Stormwater network", file: "city_inlets.geojson",      on: false, icon: <IcDot /> },
   { key: "outfalls",   label: "Outfalls · City",           group: "Stormwater network", file: "city_outfalls.geojson",    on: true,  icon: <IcOut /> },
   { key: "manholes",   label: "SW manholes · City",        group: "Stormwater network", file: "city_manholes.geojson",    on: false, icon: <IcDisc /> },
+  { key: "contours",   label: "Terrain contours · LiDAR",  group: "Terrain",            file: "contours.geojson",         on: true,  icon: <IcContour /> },
 ];
-const GROUPS = ["Risk & validation", "Drainage assets", "Stormwater network"];
+const GROUPS = ["Risk & validation", "Drainage assets", "Stormwater network", "Terrain"];
 
 function Capture({ onMap }) { const m = useMap(); useEffect(() => onMap(m), [m, onMap]); return null; }
 function CountUp({ value, dur = 1100, className }) {
@@ -143,6 +147,10 @@ export default function RainRiskMap() {
 
         {data.boundary && <GeoJSON data={data.boundary} interactive={false}
           style={{ color: "#7fd1ff", weight: 1.5, fill: false, dashArray: "4 4", opacity: 0.6 }} />}
+
+        {show.contours && data.contours && (
+          <GeoJSON data={data.contours} interactive={false}
+            style={(f) => ({ color: elevColor(f.properties.elev), weight: 0.7, opacity: 0.5 })} />)}
 
         {show.complaints && data.complaints && (
           <GeoJSON data={data.complaints}
@@ -247,6 +255,8 @@ export default function RainRiskMap() {
         <div className="lr"><span className="dot" style={{ background: "#1d4ed8" }} />City basin</div>
         <div className="lr"><span className="line" style={{ background: "#60a5fa" }} />Storm main · <span className="dot" style={{ background: "#f43f5e", width: 9, height: 9 }} />outfall</div>
         <div className="lr"><span className="swatch" style={{ background: "#f59e0b", opacity: .6 }} />311 complaints (block)</div>
+        <h3 style={{ marginTop: 9 }}>Terrain</h3>
+        <div className="lr"><span className="grad" style={{ background: "linear-gradient(90deg,#7fb3d5,#8fd3c7,#bde3a8,#fcd9a5,#fca5a5)" }} />Elevation (LiDAR, 10 ft contours)</div>
       </motion.div>
     </>
   );
