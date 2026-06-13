@@ -202,10 +202,11 @@ export default function RainRiskMap() {
               <div className="chip"><b><CountUp value={v.by_category?.sewer || 0} /></b>sewer</div>
               <div className="chip"><b><CountUp value={v.by_category?.flooding || 0} /></b>flooding</div>
             </div>
-            <p className="subtle">Honest read: complaints are population-driven (residential), while the model flags
-              physical low + under-drained spots — citywide they diverge (Spearman ρ={v.spearman_rho}). So 311 is a
-              <b> complementary</b> layer, not confirmation: it surfaces residential pain points; the ranking surfaces
-              physically risky, often under-reported areas. Source: Somerville 311 → 2020 census blocks.</p>
+            <p className="subtle">Honest read: 311 complaints are population-driven (residential), while the model flags
+              physical low + under-drained spots. Citywide they <b>align</b>: the ranking is positively correlated with
+              logged complaints (Spearman ρ={v.spearman_rho}), and {v.top10_validated} of the top 10 model cells fall in
+              blocks with flooding complaints. So 311 partly corroborates the ranking, which also surfaces physically
+              risky, under-reported areas. Source: Somerville 311 → 2020 census blocks.</p>
           </>) : <p className="subtle">Loading validation…</p>}
         </motion.section>
 

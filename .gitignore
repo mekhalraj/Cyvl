@@ -10,6 +10,8 @@ pipeline/data/city/
 pipeline/data/processed/*.geojson
 # cached OSM hydrography fetch (re-fetched by build_ranking_citywide.py)
 pipeline/data/processed/water_city.json
+# cached ArcGIS contour vertices (~241 MB; re-fetched by build_city_dem.py)
+*.npz
 
 # python
 __pycache__/

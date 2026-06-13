@@ -41,18 +41,26 @@ def pci_of(p):
             try: return float(p[k])
             except Exception: return None
     return None
-pav = []
+# Emit one (lon,lat,pci) sample per segment VERTEX (not one centroid per segment) so a road that
+# spans several 50 m cells registers its PCI in every cell it crosses, not just the centroid's cell.
+plon, plat, pval = [], [], []
+nseg = 0
 for f in pav_raw["features"]:
-    g = f.get("geometry");
+    g = f.get("geometry")
     if not g: continue
     co = g["coordinates"]
     pts = co if g["type"] == "LineString" else [c for part in co for c in part]
     if not pts: continue
-    lon = np.mean([c[0] for c in pts]); lat = np.mean([c[1] for c in pts])
-    mx, my = to_utm.transform(lon, lat)
-    pav.append((mx, my, pci_of(f.get("properties", {}))))
-pav = np.array([(x, y, (np.nan if v is None else v)) for x, y, v in pav]) if pav else np.empty((0, 3))
-print(f"basins {len(bxy)}, pavement segs {len(pav)}")
+    nseg += 1
+    v = pci_of(f.get("properties", {})); v = np.nan if v is None else v
+    for c in pts:
+        plon.append(c[0]); plat.append(c[1]); pval.append(v)
+if plon:
+    pmx, pmy = to_utm.transform(np.array(plon), np.array(plat))
+    pav = np.column_stack([pmx, pmy, np.array(pval, float)])
+else:
+    pav = np.empty((0, 3))
+print(f"basins {len(bxy)}, pavement segs {nseg}, pavement vertices {len(pav)}")
 
 # hydrography (OSM water) -> one UTM polygon, used to drop open-water cells (Mystic + ponds)
 def load_water():
@@ -100,7 +108,8 @@ water = load_water()
 print(f"water mask: {'none' if water is None else '%.2f km2 from hydrography' % (water.area/1e6)}")
 
 CELL = 50.0; F = int(CELL / RES)
-ncx = int(math.ceil(NX / F)); ncy = int(math.ceil(NY / F)); B = 15.0
+ncx = int(math.ceil(NX / F)); ncy = int(math.ceil(NY / F))
+B = 15.0  # catchment allowance, applied symmetrically to BOTH basins and pavement (was basins-only)
 rows = []
 for cy in range(ncy):
     for cx in range(ncx):
@@ -115,7 +124,7 @@ for cy in range(ncy):
         else: nb = 0
         pci = None
         if len(pav):
-            m = (pav[:,0]>=x0)&(pav[:,0]<x1)&(pav[:,1]>=y0)&(pav[:,1]<y1)
+            m = (pav[:,0]>=x0-B)&(pav[:,0]<x1+B)&(pav[:,1]>=y0-B)&(pav[:,1]<y1+B)
             vals = pav[m,2]; vals = vals[~np.isnan(vals)]
             pci = float(vals.mean()) if len(vals) else None
         wfrac = 0.0
@@ -130,9 +139,11 @@ n_before = len(rows)
 rows = [r for r in rows if r["wfrac"] < 0.5 and (r["basins"] > 0 or r["pci"] is not None)]
 print(f"cells: {n_before} candidate -> {len(rows)} ranked "
       f"({n_before - len(rows)} dropped: un-instrumented voids + open water)")
-ponds = np.array([r["pond"] for r in rows]); p95 = float(np.percentile(ponds, 95)) or 1.0
+# Normalize ponding on the 99th percentile (not 95th): only the extreme top saturates to 1.0, so the
+# high-risk band keeps differentiation instead of a large plateau all mapping to s_pond=1.0.
+ponds = np.array([r["pond"] for r in rows]); pnorm = float(np.percentile(ponds, 99)) or 1.0
 for r in rows:
-    s_pond = float(np.clip(r["pond"]/p95, 0, 1))
+    s_pond = float(np.clip(r["pond"]/pnorm, 0, 1))
     s_basin = 1.0/(1.0 + r["basins"])
     s_pci = float(np.clip((100 - r["pci"])/100, 0, 1)) if r["pci"] is not None else 0.5
     r["s_pond"], r["s_basin"], r["s_pci"] = s_pond, s_basin, s_pci
@@ -150,6 +161,16 @@ for r in rows:
             "basins":r["basins"],"mean_pci":(None if r["pci"] is None else round(r["pci"],1)),
             "s_pond":round(r["s_pond"],3),"s_basin_deficit":round(r["s_basin"],3),"s_pci":round(r["s_pci"],3)}})
 json.dump({"type":"FeatureCollection","features":feats}, open(os.path.join(WEB,"ranking.geojson"),"w"))
+
+# citywide pavement display layer (the map reads condition_score/condition_label; S3 uses score/label)
+pav_disp = []
+for f in pav_raw["features"]:
+    if not f.get("geometry"): continue
+    pr = f.get("properties", {})
+    sc = pci_of(pr)
+    pav_disp.append({"type":"Feature","geometry":f["geometry"],
+        "properties":{"condition_score":(None if sc is None else round(sc,1)),"condition_label":pr.get("label")}})
+json.dump({"type":"FeatureCollection","features":pav_disp}, open(os.path.join(WEB,"pavement.geojson"),"w"))
 
 import csv
 with open(os.path.join(WEB, "priority_ranking.csv"), "w", newline="") as fh:

@@ -15,10 +15,10 @@
     "sewer": 1800
   },
   "blocks_with_complaints": 587,
-  "ranked_cells": 4594,
-  "cells_in_complaint_blocks": 3892,
-  "top10_validated": 4,
-  "top10_block_complaints": 20,
-  "spearman_rho": -0.079,
+  "ranked_cells": 1836,
+  "cells_in_complaint_blocks": 1690,
+  "top10_validated": 9,
+  "top10_block_complaints": 66,
+  "spearman_rho": 0.186,
   "spearman_p": 0.0
 }

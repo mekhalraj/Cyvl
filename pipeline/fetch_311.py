@@ -6,7 +6,7 @@ Outputs:
   ../public/data/complaints_blocks.geojson  -- census-block polygons w/ flooding-complaint counts
   ../public/data/validation.json            -- headline validation stats for the UI
 """
-import json, os, urllib.request, urllib.parse, csv
+import json, os, time, urllib.request, urllib.parse, csv
 from shapely.geometry import shape, Point
 from shapely import STRtree
 from pyproj import Transformer
@@ -21,10 +21,16 @@ W, S, E, N = -71.138, 42.370, -71.069, 42.421
 FLOOD = ("lower(type) like '%catch basin%' or lower(type) like '%flood%' or "
          "lower(type) like '%sewer%' or lower(type) like '%drain%' or lower(type) like '%standing water%'")
 
-def get(url, t=90):
-    req = urllib.request.Request(url, headers={"User-Agent": "cyvl-hackathon"})
-    with urllib.request.urlopen(req, timeout=t) as r:
-        return json.load(r)
+def get(url, t=90, tries=5):
+    last = None
+    for k in range(tries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "cyvl-hackathon"})
+            with urllib.request.urlopen(req, timeout=t) as r:
+                return json.load(r)
+        except Exception as ex:
+            last = ex; print(f"  retry {k+1}/{tries} ({ex})", flush=True); time.sleep(3 * (k + 1))
+    raise last
 
 def bucket(t):
     t = t.lower()
@@ -43,23 +49,47 @@ params = {"where": "1=1", "geometry": f"{W},{S},{E},{N}", "geometryType": "esriG
 blocks = get(svc + "?" + urllib.parse.urlencode(params))["features"]
 print(f"blocks in footprint bbox: {len(blocks)}")
 
-# 2) flooding complaints per block_code + category
-q = {"$select": "block_code, type, count(1) as n", "$group": "block_code, type", "$where": FLOOD, "$limit": 8000}
-rows = get("https://data.somervillema.gov/resource/4pyi-uqq6.json?" + urllib.parse.urlencode(q))
+# 2) flooding complaints per block_code + category (live Socrata; fall back to the cached
+#    complaints_blocks.geojson when the City endpoint is down -- the complaint counts are static,
+#    so we can still recompute the validation join against the current ranking).
+CB_PATH = os.path.join(WEB, "complaints_blocks.geojson")
 per_block = {}   # geoid -> {total, cats:{}}
-for r in rows:
-    bc = r.get("block_code");
-    if not bc or bc.strip() == "NA": continue
-    n = int(r["n"]); b = per_block.setdefault(bc.strip(), {"total": 0, "cats": {}})
-    b["total"] += n; cat = bucket(r["type"]); b["cats"][cat] = b["cats"].get(cat, 0) + n
-
-# date range (flooding)
+used_cache = False
 try:
-    dr = get("https://data.somervillema.gov/resource/4pyi-uqq6.json?" +
-             urllib.parse.urlencode({"$select": "min(date_created) mn, max(date_created) mx", "$where": FLOOD}))[0]
-    date_range = [dr["mn"][:10], dr["mx"][:10]]
-except Exception:
-    date_range = None
+    q = {"$select": "block_code, type, count(1) as n", "$group": "block_code, type", "$where": FLOOD, "$limit": 8000}
+    rows = get("https://data.somervillema.gov/resource/4pyi-uqq6.json?" + urllib.parse.urlencode(q))
+    for r in rows:
+        bc = r.get("block_code")
+        if not bc or bc.strip() == "NA": continue
+        n = int(r["n"]); b = per_block.setdefault(bc.strip(), {"total": 0, "cats": {}})
+        b["total"] += n; cat = bucket(r["type"]); b["cats"][cat] = b["cats"].get(cat, 0) + n
+except Exception as ex:
+    if not os.path.exists(CB_PATH): raise
+    used_cache = True
+    print(f"warning: live 311 fetch failed ({ex}); reusing cached complaints_blocks.geojson", flush=True)
+    for ft in json.load(open(CB_PATH))["features"]:
+        pr = ft["properties"]; gid = str(pr.get("geoid"))
+        cats = {k: int(v) for k, v in pr.items() if k not in ("geoid", "complaints")}
+        per_block[gid] = {"total": int(pr.get("complaints", 0)), "cats": cats}
+
+# date range (flooding) -- discover the date column from a sample row (it is not "date_created"
+# on this dataset, which is why this was silently null), then min/max it.
+date_range = None
+try:
+    sample = get("https://data.somervillema.gov/resource/4pyi-uqq6.json?" +
+                 urllib.parse.urlencode({"$limit": 1, "$where": FLOOD}))
+    keys = list(sample[0].keys()) if sample else []
+    datef = next((k for k in keys if "date" in k.lower()
+                  or k.lower() in ("opened", "created", "requested_datetime", "open_dt")), None)
+    if datef:
+        dr = get("https://data.somervillema.gov/resource/4pyi-uqq6.json?" +
+                 urllib.parse.urlencode({"$select": f"min({datef}) mn, max({datef}) mx", "$where": FLOOD}))[0]
+        date_range = [str(dr.get("mn", ""))[:10], str(dr.get("mx", ""))[:10]]
+        print(f"311 date field: {datef} -> range {date_range}")
+    else:
+        print(f"warning: no date-like field in 311 records (keys={keys}); date_range left null")
+except Exception as ex:
+    print("warning: 311 date-range fetch failed:", ex)
 
 # 3) assemble choropleth (blocks in footprint, attach counts; keep those with >=1)
 feats, total_fp, cat_tot = [], 0, {}
@@ -74,8 +104,9 @@ for ft in blocks:
         for k, v in rec["cats"].items(): cat_tot[k] = cat_tot.get(k, 0) + v
         feats.append({"type": "Feature", "geometry": geom,
                       "properties": {"geoid": gid, "complaints": rec["total"], **rec["cats"]}})
-json.dump({"type": "FeatureCollection", "features": feats}, open(os.path.join(WEB, "complaints_blocks.geojson"), "w"))
-print(f"footprint blocks with complaints: {len(feats)}; total complaints: {total_fp}")
+if not used_cache:
+    json.dump({"type": "FeatureCollection", "features": feats}, open(CB_PATH, "w"))
+print(f"footprint blocks with complaints: {len(feats)}; total complaints: {total_fp}{' (from cache)' if used_cache else ''}")
 
 # 4) validation vs citywide ranked cells (read ranking.geojson centroids; STRtree spatial join)
 rk = json.load(open(os.path.join(WEB, "ranking.geojson")))["features"]
