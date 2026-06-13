@@ -1,4 +1,4 @@
-# regenerable intermediates (rebuild via build_dtm.py)
+# regenerable intermediates (rebuild via pipeline/build_dtm.py)
 *.npy
 
 # raw LiDAR is ~281 MB and lives outside the repo
@@ -9,3 +9,11 @@
 __pycache__/
 *.pyc
 .venv/
+
+# next.js / node
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+npm-debug.log*
