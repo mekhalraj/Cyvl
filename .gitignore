@@ -1,0 +1,11 @@
+# regenerable intermediates (rebuild via build_dtm.py)
+*.npy
+
+# raw LiDAR is ~281 MB and lives outside the repo
+*.laz
+*.las
+
+# python
+__pycache__/
+*.pyc
+.venv/
