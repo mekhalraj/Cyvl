@@ -8,6 +8,8 @@
 # large regenerable pipeline intermediates (web copies live in public/data)
 pipeline/data/city/
 pipeline/data/processed/*.geojson
+# cached OSM hydrography fetch (re-fetched by build_ranking_citywide.py)
+pipeline/data/processed/water_city.json
 
 # python
 __pycache__/
