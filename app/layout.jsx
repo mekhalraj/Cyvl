@@ -11,9 +11,9 @@ const firaCode = Fira_Code({
 });
 
 export const metadata = {
-  title: "Somerville Rain-Risk — Cyvl × LiDAR",
+  title: "FlowState — Stormwater Ponding Intelligence",
   description:
-    "Elevation-aware stormwater / ponding-risk screening for East Somerville & the Inner Belt, validated against 311 flooding complaints.",
+    "FlowState: citywide elevation-aware stormwater / ponding-risk screening for Somerville, MA — Cyvl + City stormwater network on LiDAR terrain, validated against 311 flooding complaints.",
 };
 
 export default function RootLayout({ children }) {

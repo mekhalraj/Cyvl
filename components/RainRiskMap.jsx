@@ -53,6 +53,10 @@ const IcDot = I(<circle cx="12" cy="12" r="7" />);
 const IcOut = I(<><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></>);
 const IcDisc = I(<><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></>);
 const IcBolt = I(<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />);
+const IcWaves = I(<>
+  <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+  <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+  <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" /></>);
 
 const LAYERS = [
   { key: "ranking",    label: "Ponding risk",        group: "Risk & validation", file: "ranking.geojson",            on: true,  icon: <IcGrid /> },
@@ -179,9 +183,9 @@ export default function RainRiskMap() {
       </MapContainer>
 
       <motion.header className="appbar glass" {...fade(0)}>
-        <span className="brand-dot"><IcBolt style={{ color: "#06121f" }} /></span>
-        <div><h1>Somerville Rain-Risk <span className="badge">citywide</span></h1>
-          <p className="sub">Cyvl + City of Somerville stormwater network on LiDAR terrain — elevation-aware ponding screen</p></div>
+        <span className="brand-dot"><IcWaves style={{ color: "#06121f" }} /></span>
+        <div><h1><span className="wordmark">FlowState</span><span className="badge">Somerville</span></h1>
+          <p className="sub">Elevation-aware stormwater ponding intelligence — Cyvl + City network on LiDAR terrain, validated against 311</p></div>
         <span className="spacer" /><span className="pill"><span className="live" /> LIVE</span>
       </motion.header>
 
@@ -234,8 +238,9 @@ export default function RainRiskMap() {
       <motion.div className="legend glass" {...fade(0.2)}>
         <h3>Ponding-risk priority</h3>
         <div className="lr"><span className="swatch" style={{ background: "#f87171" }} />≥ 75 highest</div>
-        <div className="lr"><span className="swatch" style={{ background: "#fbbf24" }} />40–75</div>
-        <div className="lr"><span className="swatch" style={{ background: "#34d399" }} />&lt; 40</div>
+        <div className="lr"><span className="swatch" style={{ background: "#fb923c" }} />60–75 high</div>
+        <div className="lr"><span className="swatch" style={{ background: "#fbbf24" }} />40–60 moderate</div>
+        <div className="lr"><span className="swatch" style={{ background: "#34d399" }} />&lt; 40 lower</div>
         <h3 style={{ marginTop: 9 }}>Drainage</h3>
         <div className="lr"><span className="dot" style={{ background: "#38bdf8", boxShadow: "0 0 0 2px #fde047" }} />Cyvl basin (verified)</div>
         <div className="lr"><span className="dot" style={{ background: "#1d4ed8" }} />City basin</div>
